@@ -1,15 +1,17 @@
 # LIME Implementation in Keras
-This repository provides an implementation of the LIME (Local Interpretable Model-agnostic Explanations) algorithm to explain predictions made by Keras models. LIME is a popular technique for interpreting complex machine learning models, including deep neural networks, by approximating their behavior locally with simpler models.
+This repository provides an implementation and usage examples of LIME, a popular technique to explain predictions of any machine learning classifier or regressor by learning an interpretable model locally around the prediction.
 
 # Table of Contents
 1. Introduction
 2. Installation
 3. Usage
-     Example Usage
-4. References
+4. Example Usage
+5. References
 
 # Introduction
-LIME helps in understanding the predictions of machine learning models by generating locally faithful explanations. It works by perturbing the input data and observing the changes in predictions, thereby allowing us to understand which features are most influential. This implementation is suitable for both image and text classification tasks using Keras.
+LIME explains individual predictions by creating synthetic data samples around the instance and fitting a simple, interpretable model (e.g., linear) weighted by the proximity to the original instance. This reveals which features most influence the model's prediction locally.
+
+LIME is model-agnostic, supports tabular, text, and image data, and helps identify why complex models make certain decisions.
 
 # Installation
 1. Clone the repository:
@@ -31,10 +33,21 @@ from lime.lime_text import LimeTextExplainer
 model = load_model('path/to/your/model.h5')
 
 3. For image classification, create a LIME image explainer:
-explainer = lime_image.LimeImageExplainer()
-
-4. For text classification, create a LIME text explainer:
-text_explainer = LimeTextExplainer(class_names=['class1', 'class2', ...])
+   
+explainer = lime_image.LimeImageExplainer(kernel_width=0.15, random_state=42)
+explanation = explainer.explain_instance(
+    img, 
+    model.predict, 
+    labels=(0, ),
+    hide_color=None, 
+    top_labels=4, 
+    num_features=1000, 
+    num_samples=1000, 
+    batch_size=10,
+    segmentation_fn=None, 
+    distance_metric='cosine', 
+    model_regressor=None, 
+    random_seed=10)
 
 5. Generate explanations for an image:
 def predict_fn(images):
@@ -42,10 +55,7 @@ def predict_fn(images):
 
 explanation = explainer.explain_instance(image, predict_fn, top_labels=5, hide_color=0, num_samples=1000)
 
-6. Generate explanations for text:
-explanation = text_explainer.explain_instance(text_instance, model.predict, num_features=10)
-
-7. Visualize the results for image classification:
+6. Visualize the results for image classification:
 from skimage.segmentation import mark_boundaries
 
 temp, mask = explainer.get_image_and_mask(explanation.top_labels[0], positive_only=True, num_features=10, hide_rest=False)
@@ -55,12 +65,10 @@ plt.imshow(img_boundry)
 plt.axis('off')
 plt.show()
 
-8. Visualize the results for text classification:
-word_idx = explanation.as_list()
-
 # Example Usage
-You can find an example usage in the LIME.ipynb file provided in this repository.
+You can find an example usage in the SHAP_Result.ipynb file provided in this repository.
 
 # References
 1. Ribeiro, M. T., Singh, S., & Guestrin, C. (2016). "Why should I trust you?" Explaining the predictions of any classifier. Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. Link to paper.
-2. LIME GitHub Repository: LIME.
+
+2. LIME GitHub: https://github.com/marcotcr/lime.
