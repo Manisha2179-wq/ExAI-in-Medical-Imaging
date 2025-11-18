@@ -26,31 +26,38 @@ pip install -r requirements.txt
    from tensorflow.keras.preprocessing import image
 
 2. Load a pre-trained model:
-   model = ResNet50(weights='imagenet')
+base_model = ResNet50(include_top=False, input_shape=(224,224,3))
+x = GlobalAveragePooling2D()(base_model.output)
+x = Dropout(0.5)(x)
+outputs = Dense(4, activation='softmax')(x)
+model = Model(inputs=base_model.input, outputs=outputs)
+model.summary()
 
 3. Prepare your input data:
-  # Load ImageNet dataset (or your own dataset)
-X, y = shap.datasets.imagenet50()
+X_train, y_train = load_dataset(train_dir, img_size)
+X_test,  y_test  = load_dataset(test_dir, img_size)
 
-# Define a function to preprocess the input images
+4. Define a function to preprocess the input images
 def f(X):
     tmp = preprocess_input(X.copy())
     return model.predict(tmp)
 
-4. Set up the SHAP explainer:
-# Define a masker that masks out parts of the input image
+5. Set up the SHAP explainer: Define a masker that masks out parts of the input image
 masker = shap.maskers.Image("inpaint_telea", X.shape)
 
-# Create an explainer instance
+6. Create an explainer instance
 explainer = shap.Explainer(f, masker)
 
-5. Generate SHAP values:
-# Calculate SHAP values for selected images
+7. Generate SHAP values:
+Calculate SHAP values for selected images
 shap_values = explainer(X[1:3], max_evals=500, batch_size=50)
 
 6. Visualize the results:
-# Plot the SHAP values overlaid on the original images
+Plot the SHAP values overlaid on the original images
 shap.image_plot(shap_values)
+
+# Example:
+SHAP can explain overall feature importance and individual prediction explanations. It is used for understanding model behavior, debugging, and compliance.
 
 # References
 1. Lundberg, S. M., & Lee, S. I. (2017). "A unified approach to interpreting model predictions." In Proceedings of the 31st International Conference on Neural Information Processing Systems (pp. 4765-4774).
