@@ -1,5 +1,5 @@
 # CAM Implementation in Keras
-This repository contains an implementation of Class Activation Mapping (CAM) using Keras. CAM is a technique used to visualize the regions in an image that are important for a model's predictions, providing insights into the decision-making process of convolutional neural networks (CNNs).
+This repository provides implementations of Class Activation Mapping (CAM) and Gradient-weighted Class Activation Mapping (Grad-CAM) for explaining the predictions of convolutional neural networks (CNNs). These techniques generate visual explanations by highlighting important regions in input images that are responsible for the model's decision.
 
 # Table of Contents
 1. Introduction
@@ -8,7 +8,13 @@ This repository contains an implementation of Class Activation Mapping (CAM) usi
 4. References
 
 # Introduction
-Class Activation Mapping (CAM) allows users to understand which parts of an image contribute most to the predictions made by CNNs. By generating heatmaps, CAM helps interpret model decisions and can be particularly useful for debugging and improving model performance.
+$1$. Class Activation Mapping (CAM):
+CAM uses the output of the last convolutional layer combined with the weights of the final classification layer to produce a coarse heatmap highlighting class-specific discriminative image regions.
+
+$2$. Gradient-weighted CAM (Grad-CAM):
+Grad-CAM generalizes CAM to a wider variety of CNN architectures by using the gradients of the target class flowing into the last convolutional layer to produce the localization heatmap. Grad-CAM is popular for its applicability to many CNNs without architecture changes or retraining.
+
+These methods enhance model interpretability and assist in understanding model failure modes, trust, and dataset bias.
 
 # Installation
 1. Clone the repository:
@@ -19,60 +25,50 @@ pip install -r requirements.txt
 
 # Usage
 1. Import the necessary libraries:
-import numpy as np
+from cam import CAM
+from gradcam import GradCAM
+
+2. Load your pre-trained model (e.g., VGG16):
+from tensorflow.keras.applications import VGG16
+model = VGG16(weights='imagenet')
+
+3. Initialize CAM or Grad-CAM for your target layer:
+   cam = CAM(model, target_layer='block5_conv3')         # For CAM
+gradcam = GradCAM(model, target_layer='block5_conv3') # For Grad-CAM
+
+4. Compute the heatmap for a given input:
+   heatmap = gradcam.compute_heatmap(image, class_idx=target_class_idx)
+   
+5. Overlay and visualize the heatmap:
+import cv2
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import Model
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications import xception, imagenet_utils
 
-2. Load your pre-trained model (e.g., Xception):
-model = xception.Xception(weights='imagenet')
+heatmap_resized = cv2.resize(heatmap, (image.shape[1], image.shape[0]))
+overlay = cv2.applyColorMap(np.uint8(255 * heatmap_resized), cv2.COLORMAP_JET)
 
-3. Define a function to preprocess the input image:
-def get_img_array(img_path, size):
-    img = image.load_img(img_path, target_size=size)
-    array = image.img_to_array(img)
-    array = np.expand_dims(array, axis=0)
-    return xception.preprocess_input(array)
+plt.imshow(cv2.addWeighted(image, 0.6, overlay, 0.4, 0))
+plt.axis('off')
+plt.show()
 
-4. Create the CAM heatmap:
-def make_cam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
-    # Create a model that maps the input image to the activations of the last conv layer
-    grad_model = Model([model.inputs], [model.get_layer(last_conv_layer_name).output, model.output])
-    with tf.GradientTape() as tape:
-        conv_outputs, predictions = grad_model(img_array)
-        loss = predictions[:, pred_index]
-    grads = tape.gradient(loss, conv_outputs)[0]
-    pooled_grads = tf.reduce_mean(grads, axis=(0, 1))
-    conv_outputs = conv_outputs[0]
-    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
-    heatmap = tf.maximum(heatmap, 0) / tf.reduce_max(heatmap)
-    return heatmap.numpy()
-
-5. Visualize the results:
-def display_cam(img_path, heatmap):
-    img = image.load_img(img_path)
-    img = image.img_to_array(img)
-    heatmap = np.uint8(255 * heatmap)
-    jet = plt.cm.jet(np.arange(256))[:, :3]
-    jet_heatmap = jet[heatmap]
-    jet_heatmap = image.array_to_img(jet_heatmap)
-    
-    # Superimpose the heatmap on original image
-    superimposed_img = jet_heatmap * 0.4 + img
-    plt.imshow(superimposed_img / 255.)
-    plt.axis('off')
-    plt.show()
-
-img_path = 'path/to/your/image.jpg'
-img_array = get_img_array(img_path, size=(299, 299))
-predicted_class_index = np.argmax(model.predict(img_array))
-
-heatmap = make_cam_heatmap(img_array, model, 'block14_sepconv2_act', pred_index=predicted_class_index)
-display_cam(img_path, heatmap)
 
 # Example Usage
-You can find an example usage in the CAM.ipynb file provided in this repository.
+from tensorflow.keras.applications.vgg16 import preprocess_input
+from tensorflow.keras.preprocessing import image
+import numpy as np
+
+img_path = 'path/to/image.jpg'
+img = image.load_img(img_path, target_size=(224, 224))
+x = image.img_to_array(img)
+x = np.expand_dims(x, axis=0)
+x = preprocess_input(x)
+
+heatmap = gradcam.compute_heatmap(x, class_idx=None)  # None uses top predicted class
+
 
 # References
-Zhou, B., Khosla, A., Lapedriza, A., Oliva, A., & Torralba, A. (2016). "Learning Deep Features for Discriminative Localization." Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR). Link to paper.
+1. Zhou et al., "Learning Deep Features for Discriminative Localization," CVPR 2016 (CAM)
+2. Selvaraju et al., "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization," ICCV 2017
+3. GitHub: Grad-CAM repository
+
+This README provides users a comprehensive yet straightforward guide to apply CAM and Grad-CAM for CNN explanation and visualization. Adjust target layers, models, and visualization methods according to your project needs
+
