@@ -66,9 +66,10 @@ plt.axis('off')
 plt.show()
 
 # Example Usage
-You can find an example usage in the SHAP_Result.ipynb file provided in this repository.
+Supports tabular, text, and image. For images, LIME segments images and perturbs region combinations to highlight areas affecting prediction.
 
 # References
 1. Ribeiro, M. T., Singh, S., & Guestrin, C. (2016). "Why should I trust you?" Explaining the predictions of any classifier. Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. Link to paper.
 
 2. LIME GitHub: https://github.com/marcotcr/lime.
+
